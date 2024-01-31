@@ -91,12 +91,6 @@ int main(int argc, char *argv[]){
             }
 
 
-
-
-
-
-
-
             char from[MAXLINE], to[MAXLINE], subject[MAXLINE], body[50][MAXLINE];
 
             printf("****Type the mail****\n");
@@ -144,7 +138,73 @@ int main(int argc, char *argv[]){
                 continue;
             }
             
-            printf("successfully read mail\n");
+            char buffer[MAXLINE];
+            memset(buffer, 0, MAXLINE);
+            ssize_t len = recv(sockfd, buffer, MAXLINE, 0);
+            memset(buffer, 0, MAXLINE);
+            strcpy(buffer, "HELO ");
+            strcat(buffer, server_ip);
+            strcat(buffer, "\n");
+            send(sockfd, buffer, strlen(buffer), 0);
+
+
+            memset(buffer, 0, MAXLINE);
+            len = recv(sockfd, buffer, MAXLINE, 0);
+            memset(buffer, 0, MAXLINE);
+            strcpy(buffer, "MAIL ");
+            strcat(buffer, from);
+            strcat(buffer, "\n");
+
+            send(sockfd, buffer, strlen(buffer), 0);
+            memset(buffer, 0, MAXLINE);
+            len = recv(sockfd, buffer, MAXLINE, 0);
+            memset(buffer, 0, MAXLINE);
+            strcpy(buffer, "RCPT ");
+            strcat(buffer, to);
+            strcat(buffer, "\n");
+            send(sockfd, buffer, strlen(buffer), 0);
+            memset(buffer, 0, MAXLINE);
+
+            len = recv(sockfd, buffer, MAXLINE, 0);
+
+            int code = atoi(buffer, 3);
+
+            if(code == 550){
+                printf("Error in sending mail: %s\n", buffer);
+                close(sockfd);
+                continue;
+            }else if(code == 250){
+                
+                memset(buffer, 0, MAXLINE);
+                strcpy(buffer, "DATA\0");
+                send(sockfd, buffer, strlen(buffer), 0);
+
+                memset(buffer, 0, MAXLINE);
+                len = recv(sockfd, buffer, MAXLINE, 0);
+
+                memset(buffer, 0, MAXLINE);
+                send(sockfd, from, strlen(from), 0);
+                send(sockfd, to, strlen(to), 0);
+                send(sockfd, subject, strlen(subject), 0);
+                for(int j = 0; j<=i; j++){
+                    send(sockfd, body[j], strlen(body[j]), 0);
+                }
+
+
+                memset(buffer, 0, MAXLINE);
+                len = recv(sockfd, buffer, MAXLINE, 0);
+                memset(buffer, 0, MAXLINE);
+                strcpy(buffer, "QUIT\0");
+                send(sockfd, buffer, strlen(buffer), 0);
+                memset(buffer, 0, MAXLINE);
+                len = recv(sockfd, buffer, MAXLINE, 0);
+
+
+                close(sockfd);
+                printf("Mail sent successfully\n");
+
+            }
+
 
 
 
