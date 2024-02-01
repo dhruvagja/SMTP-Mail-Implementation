@@ -7,6 +7,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <fcntl.h>
+#include <time.h>
 
 #define BASE_DIR "./Networks-Lab/"
 
@@ -53,16 +54,19 @@ int main(int argc, char *argv[]){
         if((pid = fork()) == 0){
             close(sockfd);
 
+            // when established the connection, send 220 message to client
             printf("Connection established with %s:%d\n", inet_ntoa(cli_addr.sin_addr), ntohs(cli_addr.sin_port));
             memset(buf, 0, sizeof(buf));
-            sprintf(buf, "220 <%s> Service ready\n", inet_ntoa(cli_addr.sin_addr));
+            sprintf(buf, "220 <%s> Service ready", inet_ntoa(cli_addr.sin_addr));
             send(smtp_sockfd, buf, strlen(buf), 0);
             memset(buf, 0, sizeof(buf));
             ssize_t len = recv(smtp_sockfd, buf, sizeof(buf), 0);
             buf[len] = '\0';
+
+            // receiving HELO message from client
             if(buf[0] == 'H' && buf[1] == 'E' && buf[2] == 'L' && buf[3] == 'O'){
                 memset(buf, 0, sizeof(buf));
-                sprintf(buf, "250 OK Hello %s\n", inet_ntoa(cli_addr.sin_addr));
+                sprintf(buf, "250 OK Hello %s", inet_ntoa(cli_addr.sin_addr));
                 send(smtp_sockfd, buf, strlen(buf), 0);
             }
             // not sure we need to implement error code 500
@@ -88,7 +92,7 @@ int main(int argc, char *argv[]){
                 }
             }
             memset(buf, 0, sizeof(buf));
-            sprintf(buf, "250<%s>... Sender ok\n", sending_user);
+            sprintf(buf, "250<%s>... Sender ok", sending_user);
             send(smtp_sockfd, buf, strlen(buf), 0);
 
             // receiving RCPT TO:
@@ -96,6 +100,8 @@ int main(int argc, char *argv[]){
             len = recv(smtp_sockfd, buf, sizeof(buf), 0);
             buf[len] = '\0';
             char target_user[100];
+
+            // storing target_user
             for(int i = 0; i < strlen(buf); i++){
                 if(buf[i] == '<'){
                     i++;
@@ -108,21 +114,16 @@ int main(int argc, char *argv[]){
                 }
             }
 
+            // storing target_username
             char target_username[50];
-            for(int i = 0; i < strlen(target_user); i++){
+            int i;
+            for(i = 0; i < strlen(target_user); i++){
                 if(target_user[i] == '@'){
                     break;
                 }
                 target_username[i] = target_user[i];
             }
-
-            // char user_name[50];
-            // for(int i = 0; i < strlen(sending_user); i++){
-            //     if(sending_user[i] == '@'){
-            //         break;
-            //     }
-            //     user_name[i] = sending_user[i];
-            // }
+            target_username[i] = '\0';
 
             // search for target_username in user.txt file
             char *filename = malloc(strlen(BASE_DIR) + strlen("user.txt") + 1);
@@ -146,71 +147,76 @@ int main(int argc, char *argv[]){
             // if recipient is found
             if(found == 1){
                 memset(buf, 0, sizeof(buf));
-                sprintf(buf, "250 root... Recipient ok\n");
+                sprintf(buf, "250 root... Recipient ok");
                 send(smtp_sockfd, buf, strlen(buf), 0);
             }
+            // if not found, close the connection and force client to retake the mail from the sender
             else{
                 memset(buf, 0, sizeof(buf));
                 sprintf(buf, "550 %s No such user\n", target_user);
                 send(smtp_sockfd, buf, strlen(buf), 0);
+                close(smtp_sockfd);
+                continue;
             }
-
+            
+            // receiving "DATA" message from client and start receiving the mail
             memset(buf, 0, sizeof(buf));
             len = recv(smtp_sockfd, buf, sizeof(buf), 0);
             buf[len] = '\0';
             if(strcmp(buf, "DATA\r\n") == 0){
                 memset(buf, 0, sizeof(buf));
-                sprintf(buf, "354 Enter mail, end with \".\" on a line by itself\n");
+                sprintf(buf, "354 Enter mail, end with \".\" on a line by itself");
                 send(smtp_sockfd, buf, strlen(buf), 0);
             }
 
-            // receiving the mail
+            // opening the mymailbox.txt file corresponding to the target user
+            char *filename = malloc(strlen(BASE_DIR) + strlen(target_username) + strlen("/mymailbox.txt") + 1);
+            snprintf(filename, sizeof(filename), "%s%s/mymailbox.txt", BASE_DIR, target_username);
+            printf("Filename: %s\n", filename);
+            FILE *file = fopen(filename, "a");
+            if (file == NULL) {
+                perror("Error opening mailbox file");
+                exit(EXIT_FAILURE);
+            }
+
+            // receiving the mail and storing in the mymailvox.txt file corresponding to the target user
             while (1) {
                 memset(buf, 0, sizeof(buf));
                 ssize_t n = recv(smtp_sockfd, buf, sizeof(buf), 0);
-                if (n <= 0) {
-                    break;  // Connection closed or error
+                buf[n] = '\0';
+
+                int flag = 0;
+                char recieved[100];
+
+                // is To: is found, then add the recieved time to the mail
+                if(buf[0] == 'T' && buf[1] == 'O' && buf[2] == ':'){
+                    flag = 1;
+                    time_t time_now;
+                    struct tm * timeinfo;
+
+                    time(&time_now);
+                    timeinfo = localtime(&time_now);
+
+                    char timestring[50];
+                    strftime(timestring, sizeof(timestring), "%d-%m-%Y %H:%M:%S", timeinfo);
+
+                    memset(recieved, 0, sizeof(recieved));
+                    sprintf(recieved, "Recieved: %s", timestring);
                 }
 
-                buf[n] = '\0';
-                int i;
-                char username[50];
-                if(buf[0] == 'T' && buf[1] == 'o'){
-                    for(i = 0; i < strlen(buf); i++){
-                        if(buf[i] == ':'){
-                            break;
-                        }
-                    }
-                    i++;
-                    
-                    int j = 0;
-                    while(buf[i] != '@'){
-                        username[j] = buf[i];
-                        i++;
-                        j++;
-                    }
-                    username[j] = '\0';
-                    printf("Username: %s\n", username);
+                if (n <= 0) {
+                    break;  // Connection closed or error
                 }
 
                 if (strcmp(buf, ".\r\n") == 0) {
                     break;
                 }
 
-                char *filename = malloc(strlen(BASE_DIR) + strlen(username) + strlen("/mymailbox.txt") + 1);
-                
-                snprintf(filename, sizeof(filename), "%s%s/mymailbox.txt", BASE_DIR, username);
-                printf("Filename: %s\n", filename);
-                FILE *file = fopen(filename, "a");
-                if (file == NULL) {
-                    perror("Error opening mailbox file");
-                    exit(EXIT_FAILURE);
-                }
-
                 fprintf(file, "%s", buf);
-
-                fclose(file);
+                if(flag) fprintf(file, "%s", recieved);
             }
+
+            fclose(file);
 
             close(smtp_sockfd);
             exit(0);
