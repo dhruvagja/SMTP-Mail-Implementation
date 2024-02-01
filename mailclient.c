@@ -112,15 +112,15 @@ int main(int argc, char *argv[]){
             }
 
             int pos = 0;
-            char str[MAXLINE];
+            char from_username[MAXLINE], to_username[MAXLINE];
             for(int j = 6; j<strlen(from); j++){
                 if(from[j] != ' '){
                     pos = j;
                     break;
                 }
             }
-            strncpy(str, from+pos, strlen(from)-pos-1);
-            if(!check_xy(str,username)){
+            strncpy(from_username, from+pos, strlen(from)-pos-1);
+            if(!check_xy(from_username,user)){
                 printf("Incorrect format\n");
                 continue;
             }
@@ -131,9 +131,9 @@ int main(int argc, char *argv[]){
                     break;
                 }
             }
-            memset(str, 0, MAXLINE);
-            strncpy(str, to+pos, strlen(to)-pos-1);
-            if(!check_xy(str,username)){
+            memset(to_username, 0, MAXLINE);
+            strncpy(to_username, to+pos, strlen(to)-pos-1);
+            if(!check_xy(to_username,to_username)){
                 printf("Incorrect format\n");
                 continue;
             }
@@ -152,22 +152,26 @@ int main(int argc, char *argv[]){
             len = recv(sockfd, buffer, MAXLINE, 0);
             memset(buffer, 0, MAXLINE);
             strcpy(buffer, "MAIL ");
-            strcat(buffer, from);
-            strcat(buffer, "\n");
+            strcat(buffer, "FROM: <");
+            strcat(buffer, from_username);
+            strcat(buffer, ">");
+            strcat(buffer, "\r\n");
 
             send(sockfd, buffer, strlen(buffer), 0);
             memset(buffer, 0, MAXLINE);
             len = recv(sockfd, buffer, MAXLINE, 0);
             memset(buffer, 0, MAXLINE);
             strcpy(buffer, "RCPT ");
+            strcat(buffer, "TO: <");
             strcat(buffer, to);
-            strcat(buffer, "\n");
+            strcat(buffer, ">\r\n");
             send(sockfd, buffer, strlen(buffer), 0);
             memset(buffer, 0, MAXLINE);
 
             len = recv(sockfd, buffer, MAXLINE, 0);
-
-            int code = atoi(buffer, 3);
+            char temp[4];
+            strncpy(temp, buffer,3);
+            int code = atoi(temp);
 
             if(code == 550){
                 printf("Error in sending mail: %s\n", buffer);
@@ -176,25 +180,33 @@ int main(int argc, char *argv[]){
             }else if(code == 250){
                 
                 memset(buffer, 0, MAXLINE);
-                strcpy(buffer, "DATA\0");
+                strcpy(buffer, "DATA\r\n");
                 send(sockfd, buffer, strlen(buffer), 0);
 
                 memset(buffer, 0, MAXLINE);
                 len = recv(sockfd, buffer, MAXLINE, 0);
 
-                memset(buffer, 0, MAXLINE);
                 send(sockfd, from, strlen(from), 0);
                 send(sockfd, to, strlen(to), 0);
                 send(sockfd, subject, strlen(subject), 0);
                 for(int j = 0; j<=i; j++){
-                    send(sockfd, body[j], strlen(body[j]), 0);
+                    memset(buffer, 0, MAXLINE);
+                    strcpy(buffer, body[j]);
+                    for(int j = 0; j<MAXLINE; j++){
+                        if(buffer[j] == '\n'){
+                            buffer[j] = '\r';
+                            buffer[j+1] = '\n';
+                            break;
+                        }
+                    }
+                    send(sockfd, buffer, strlen(buffer), 0);
                 }
 
 
                 memset(buffer, 0, MAXLINE);
                 len = recv(sockfd, buffer, MAXLINE, 0);
                 memset(buffer, 0, MAXLINE);
-                strcpy(buffer, "QUIT\0");
+                strcpy(buffer, "QUIT\r\n");
                 send(sockfd, buffer, strlen(buffer), 0);
                 memset(buffer, 0, MAXLINE);
                 len = recv(sockfd, buffer, MAXLINE, 0);
