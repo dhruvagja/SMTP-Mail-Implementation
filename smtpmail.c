@@ -204,7 +204,7 @@ int main(int argc, char *argv[]){
                 memset(buf, 0, sizeof(buf));
                 ssize_t n = recv(smtp_sockfd, buf, 100, 0);
                 // check
-                // buf[n] = '\0';
+                buf[n] = '\0';
 
                 int flag = 0;
                 char recieved[100];
@@ -245,6 +245,7 @@ int main(int argc, char *argv[]){
             fclose(file);
             memset(buf, 0, sizeof(buf));
             sprintf(buf, "250 OK Message accepted for delivery\r\n");
+            printf("buf = %s\n", buf);
             send(smtp_sockfd, buf, strlen(buf), 0);
 
             len = recv(smtp_sockfd, buf, 100, 0);
@@ -252,6 +253,7 @@ int main(int argc, char *argv[]){
             if(strcmp(buf, "QUIT\r\n") == 0){
                 memset(buf, 0, sizeof(buf));
                 sprintf(buf, "221 %s closing connection\r\n", inet_ntoa(cli_addr.sin_addr));
+                printf("buf = %s\n", buf);
                 send(smtp_sockfd, buf, strlen(buf), 0);
             }
             close(smtp_sockfd);
