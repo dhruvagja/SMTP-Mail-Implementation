@@ -38,20 +38,20 @@ int main(int argc, char *argv[]){
         exit(0);
     }
 
-    listen(sockfd, 10);
+    listen(sockfd, 5);
     printf("SMTP Listening on port %d\n", port_no);
 
     int pid;
     while(1){
         clilen = sizeof(cli_addr);
         smtp_sockfd = accept(sockfd, (struct sockaddr *)&cli_addr, &clilen);
-
+        printf("hi\n");
         if(smtp_sockfd < 0){
             printf("Accept error\n");
             exit(0);
         }
 
-        if((pid = fork()) == 0){
+        if(fork() == 0){
             close(sockfd);
 
             // when established the connection, send 220 message to client

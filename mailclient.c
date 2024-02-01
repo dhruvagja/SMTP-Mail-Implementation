@@ -10,7 +10,7 @@
 
 #define MAXLINE 100
 
-int check_xy(char *str, char *username){
+int check_xy(char str[], char *username){
     
     int cnt = 0, space = 0;
 
@@ -50,7 +50,7 @@ int main(int argc, char *argv[]){
     int smtp_port = atoi(argv[2]);
     int pop3_port = atoi(argv[3]);
 
-
+    
     char user[MAXLINE], pass[MAXLINE];
 
     printf("Enter username: ");
@@ -144,7 +144,7 @@ int main(int argc, char *argv[]){
             memset(buffer, 0, MAXLINE);
             strcpy(buffer, "HELO ");
             strcat(buffer, server_ip);
-            strcat(buffer, "\n");
+            strcat(buffer, "\r\n");
             send(sockfd, buffer, strlen(buffer), 0);
 
 
