@@ -141,34 +141,54 @@ int main(int argc, char *argv[]){
             char buffer[MAXLINE];
             memset(buffer, 0, MAXLINE);
             ssize_t len = recv(sockfd, buffer, MAXLINE, 0);
+            printf("recv = %s\n", buffer);
             memset(buffer, 0, MAXLINE);
             strcpy(buffer, "HELO ");
             strcat(buffer, server_ip);
             strcat(buffer, "\r\n");
             send(sockfd, buffer, strlen(buffer), 0);
+            printf("sent = %s\n", buffer);
 
 
             memset(buffer, 0, MAXLINE);
             len = recv(sockfd, buffer, MAXLINE, 0);
+            printf("recv = %s\n", buffer);
             memset(buffer, 0, MAXLINE);
             strcpy(buffer, "MAIL ");
             strcat(buffer, "FROM: <");
-            strcat(buffer, from_username);
+            // changed from "from_username" to "from"
+            char cleaned_from[MAXLINE];
+            memset(cleaned_from, 0, MAXLINE);
+            strcat(cleaned_from, user);
+            strcat(cleaned_from, "@");
+            strcat(cleaned_from, server_ip);
+            printf("cleaned_from = %s\n", cleaned_from);
+            printf("from = %s\n", from);
+            strcat(buffer, cleaned_from);
             strcat(buffer, ">");
             strcat(buffer, "\r\n");
 
             send(sockfd, buffer, strlen(buffer), 0);
+            printf("sent = %s\n", buffer);
             memset(buffer, 0, MAXLINE);
             len = recv(sockfd, buffer, MAXLINE, 0);
+            printf("recv = %s\n", buffer);
             memset(buffer, 0, MAXLINE);
             strcpy(buffer, "RCPT ");
-            strcat(buffer, "TO: <");
-            strcat(buffer, to);
-            strcat(buffer, ">\r\n");
+            strcat(buffer, "TO: ");
+            char cleaned_to[MAXLINE];
+            memset(cleaned_to, 0, MAXLINE);
+            strcat(cleaned_to, to_username);
+            strcat(cleaned_to, "@");
+            strcat(cleaned_to, server_ip);
+            strcat(buffer, cleaned_to);
+            strcat(buffer, "\r\n");
             send(sockfd, buffer, strlen(buffer), 0);
+            printf("sent = %s\n", buffer);
             memset(buffer, 0, MAXLINE);
 
             len = recv(sockfd, buffer, MAXLINE, 0);
+            printf("recv = %s\n", buffer);
             char temp[4];
             strncpy(temp, buffer,3);
             int code = atoi(temp);
@@ -182,34 +202,46 @@ int main(int argc, char *argv[]){
                 memset(buffer, 0, MAXLINE);
                 strcpy(buffer, "DATA\r\n");
                 send(sockfd, buffer, strlen(buffer), 0);
+                printf("sent = %s\n", buffer);
 
                 memset(buffer, 0, MAXLINE);
                 len = recv(sockfd, buffer, MAXLINE, 0);
-
+                printf("recv = %s\n", buffer);
+                strcat(from, "\r\n");
                 send(sockfd, from, strlen(from), 0);
+                printf("sent = %s\n", from);
+                strcat(to, "\r\n");
                 send(sockfd, to, strlen(to), 0);
+                printf("sent = %s\n", to);
+                strcat(subject, "\r\n");
                 send(sockfd, subject, strlen(subject), 0);
+                printf("sent = %s\n", subject);
                 for(int j = 0; j<=i; j++){
                     memset(buffer, 0, MAXLINE);
                     strcpy(buffer, body[j]);
                     for(int j = 0; j<MAXLINE; j++){
                         if(buffer[j] == '\n'){
+                            printf("one line\n");
                             buffer[j] = '\r';
                             buffer[j+1] = '\n';
                             break;
                         }
                     }
                     send(sockfd, buffer, strlen(buffer), 0);
+                    printf("sent = %s\n", buffer);
                 }
 
 
                 memset(buffer, 0, MAXLINE);
                 len = recv(sockfd, buffer, MAXLINE, 0);
+                printf("recv = %s\n", buffer);
                 memset(buffer, 0, MAXLINE);
                 strcpy(buffer, "QUIT\r\n");
                 send(sockfd, buffer, strlen(buffer), 0);
+                printf("sent = %s\n", buffer);
                 memset(buffer, 0, MAXLINE);
                 len = recv(sockfd, buffer, MAXLINE, 0);
+                printf("recv = %s\n", buffer);
 
 
                 close(sockfd);
