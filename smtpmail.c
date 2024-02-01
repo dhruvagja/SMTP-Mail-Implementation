@@ -126,9 +126,9 @@ int main(int argc, char *argv[]){
             target_username[i] = '\0';
 
             // search for target_username in user.txt file
-            char *filename = malloc(strlen(BASE_DIR) + strlen("user.txt") + 1);
-            snprintf(filename, sizeof(filename), "%suser.txt", BASE_DIR);
-            FILE *fptr = fopen(filename, "r");
+            char *filename_ = malloc(strlen(BASE_DIR) + strlen("user.txt") + 1);
+            snprintf(filename_, sizeof(filename_), "%suser.txt", BASE_DIR);
+            FILE *fptr = fopen(filename_, "r");
             if (fptr == NULL) {
                 perror("Error opening user file");
                 exit(EXIT_FAILURE);
