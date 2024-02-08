@@ -10,6 +10,59 @@
 
 #define MAXLINE 100
 
+
+
+void listing(){
+    FILE * list = fopen("list.txt", "w");
+    FILE * temp = fopen("temp.txt", "r");
+
+    char line[256];
+    int sno = 0;
+    char received[100];
+    char emailid[100];
+    char subject[100];
+    char tosend[256];
+
+    while(fgets(line, sizeof(line), temp)){
+        char *colon_pos = strstr(line, ":");
+
+        char *start = colon_pos + 1;
+        if(colon_pos != NULL){
+            char *start = colon_pos + 1;
+            while(*start == ' '){
+                start++;
+            }
+
+
+            if(strstr(line, "From:")!= NULL){
+                sscanf(start, "%[^\n]", emailid);
+                emailid[strlen(emailid) - 1] = '\0';
+
+            }
+
+            else if(strstr(line, "Recieved:")!= NULL){
+                sscanf(start, "%[^\n]", received);
+                received[strlen(received) - 1] = '\0';
+
+
+                sno++;
+                fprintf(list, "%d %s %s %s\n", sno, emailid, received, subject);
+                
+            }
+
+            else if(strstr(line, "Subject:")!= NULL){
+                sscanf(start, "%[^\n]", subject);
+                subject[strlen(subject) - 1] = '\0';
+            }
+        }
+    }
+
+    fclose(temp);
+    remove("temp.txt");
+    fclose(list);
+    return;
+}
+
 int check_xy(char str[], char *username){
     
     int cnt = 0, space = 0;
@@ -181,40 +234,114 @@ int main(int argc, char *argv[]){
             
 
 
-            int input;
-            while(1){
+            
+
+            memset(buffer, 0, MAXLINE);
+            FILE *file = fopen("temp.txt", "w");
+            for(int i = 0; i< n; i++){
+                if(deleted[i] == 1){
+                    continue;
+                }
+                char tempchar[10];
                 memset(buffer, 0, MAXLINE);
-                strcpy(buffer, "LIST\r\n");
+                strcpy(buffer, "RETR ");
+                sprintf(tempchar,"%d", i+1);
+                strcat(buffer, tempchar);
+                strcat(buffer, "\r\n");
+
                 send(sockfd, buffer, strlen(buffer), 0);
-                input = 1;
-                int count = 0;
                 memset(buffer, 0, MAXLINE);
                 len = recv(sockfd, buffer, MAXLINE, 0);
-                printf("S : %s", buffer);
-
                 if(strncmp(buffer, "-ERR", 4) == 0){
-                    printf("Error in listing mails\n");
+                    printf("Error in retrieving mail\n");
+                    remove("list.txt");
                     close(sockfd);
-                    break;
+                    continue;
                 }
+                
                 while(1){
                     memset(buffer, 0, MAXLINE);
                     len = recv(sockfd, buffer, MAXLINE, 0);
 
                     for(int j = 0; j<len ; j++){
                         if(buffer[j] == '.'){
-                            memset(temp, 0, MAXLINE);
-                            strncpy(temp, buffer, j);
-                            printf("%s\n", buffer);
-                            goto next;
+                            fputs(buffer, file);
+                            goto next3;
                         }
                     }
                     
-                    printf("%s", buffer);
+                    fputs(buffer, file);
                 }
-                next:
+                next3:
+                
+
+
+            }
+            fclose(file);
+            listing();
+
 
             
+
+
+
+            int input;
+            int delete[n+1];
+            for(int i = 1; i<=n; i++){
+                delete[i] = 0;
+            }
+
+
+
+
+            while(1){
+                // memset(buffer, 0, MAXLINE);
+                // strcpy(buffer, "LIST\r\n");
+                // send(sockfd, buffer, strlen(buffer), 0);
+                // input = 1;
+                // int count = 0;
+                // memset(buffer, 0, MAXLINE);
+                // len = recv(sockfd, buffer, MAXLINE, 0);
+                // printf("S : %s", buffer);
+
+                // if(strncmp(buffer, "-ERR", 4) == 0){
+                //     printf("Error in listing mails\n");
+                //     close(sockfd);
+                //     break;
+                // }
+                // while(1){
+                //     memset(buffer, 0, MAXLINE);
+                //     len = recv(sockfd, buffer, MAXLINE, 0);
+
+                //     for(int j = 0; j<len ; j++){
+                //         if(buffer[j] == '.'){
+                //             memset(temp, 0, MAXLINE);
+                //             strncpy(temp, buffer, j);
+                //             printf("%s\n", buffer);
+                //             goto next;
+                //         }
+                //     }
+                    
+                //     printf("%s", buffer);
+                // }
+                // next:
+
+                
+
+                FILE *list = fopen("list.txt", "r");
+                char line[256];
+
+                for(int i = 1; i<=n ; i++){
+                    fgets(line,sizeof(line), list);
+                    if(delete[i] == 1){
+                        continue;
+                    }
+                    //memset(line, 256, 0);
+                    
+                    printf("%s", line);
+
+                }
+                fclose(list);
 
                 printf("Enter the mail no. to see: ");
                 scanf("%d", &input);
@@ -288,13 +415,17 @@ int main(int argc, char *argv[]){
 
                     memset(buffer, 0, MAXLINE);
                     len = recv(sockfd, buffer, MAXLINE, 0);
+                    printf("%s", buffer);
                     if(strncmp(buffer, "-ERR", 4) == 0){
                         printf("Error in deleting mail\n");
+                        remove("list.txt");
                         close(sockfd);
                         continue;
                     }
                     if(strncmp(buffer, "+OK", 3) == 0){
                         printf("Mail deleted\n");
+                        printf("input = %d\n", input);
+                        delete[input] = 1;
                     }
 
                 }
@@ -305,6 +436,7 @@ int main(int argc, char *argv[]){
             if(input == -1){
 
                 close(sockfd);
+                remove("list.txt");
                 continue;
             }
              
