@@ -88,7 +88,190 @@ int main(int argc, char *argv[]){
         scanf("%d", &choice);
 
         if(choice == 1){
-            continue;
+            int sockfd;
+            struct sockaddr_in server_addr;
+
+            if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
+                perror("Error in creating socket\n");
+                exit(0);
+            }
+
+            server_addr.sin_family = AF_INET;
+            inet_aton(server_ip, &server_addr.sin_addr);
+            server_addr.sin_port = htons(pop3_port);
+
+            if((connect(sockfd, (struct sockaddr *) &server_addr, sizeof(server_addr))) < 0){
+                perror("Unable to connect to server\n");
+                exit(0);
+            }
+
+            char buffer[MAXLINE];
+            memset(buffer, 0, MAXLINE);
+
+            ssize_t len = recv(sockfd, buffer, MAXLINE, 0);
+            printf("S : %s", buffer);
+            
+            if(strncmp(buffer, "+OK", 3) != 0){
+                printf("Error in connecting to POP3 server\n");
+                close(sockfd);
+                continue;
+            }
+
+            memset(buffer, 0, MAXLINE);
+            strcpy(buffer, "USER ");
+            strcat(buffer, user);
+            strcat(buffer, "\r\n");
+            send(sockfd, buffer, strlen(buffer), 0);
+
+            memset(buffer, 0, MAXLINE);
+            len = recv(sockfd, buffer, MAXLINE, 0);
+            printf("S : %s", buffer);
+
+            if(strncmp(buffer, "-ERR", 4) == 0){
+                printf("Invalid user\n");
+                close(sockfd);
+                reutrn 0;
+            }
+
+            memset(buffer, 0, MAXLINE);
+            strcpy(buffer, "PASS ");
+            strcat(buffer, pass);
+            strcat(buffer, "\r\n");
+            send(sockfd, buffer, strlen(buffer), 0);
+
+            memset(buffer, 0, MAXLINE);
+            len = recv(sockfd, buffer, MAXLINE, 0);
+
+            if(strncmp(buffer, "-ERR", 4) == 0){
+                printf("Invalid password\n");
+                close(sockfd);
+                reutrn 0;
+            }
+
+            memset(buffer, 0, MAXLINE);
+            strcpy(buffer, "STAT\r\n");
+            send(sockfd, buffer, strlen(buffer), 0);
+            len = recv(sockfd, buffer, MAXLINE, 0);
+
+            printf("S : %s", buffer);
+            int n;
+            char temp[MAXLINE];
+            int i = 3;
+
+            for(i; i< strlen(buffer); i++){
+                if(buffer[i] == ' ') i++;
+                else break;
+            }
+
+            for(int j = i; i< strlen(buffer); i++){
+                if(buffer[i] == ' ') break;
+                temp[j-i] = buffer[i]; 
+            }
+            strcat(temp, "\0");
+            n = atoi(temp);
+            int deleted[n];
+            for(int i = 0; i<n; i++){
+                deleted[i] = 0;
+            }
+            printf("You have %d mails\n", n);
+
+            memset(buffer, 0, MAXLINE);
+            strcpy(buffer, "LIST\r\n");
+            send(sockfd, buffer, strlen(buffer), 0);
+            int input = 1;
+            int count = 0;
+            memset(buffer, 0, MAXLINE);
+            len = recv(sockfd, buffer, MAXLINE, 0);
+            printf("S : %s", buffer);
+
+            if(strncmp(buffer, "-ERR", 4) == 0){
+                printf("Error in listing mails\n");
+                close(sockfd);
+                continue;
+            }
+
+
+            
+            while(1){
+                while(1){
+                    memset(buffer, 0, MAXLINE);
+                    len = recv(sockfd, buffer, MAXLINE, 0);
+
+                    for(int j = 0; j<n ; j++){
+                        if(buffer[j] == '.'){
+                            memset(temp, 0, MAXLINE);
+                            strncpy(temp, buffer, j);
+                            printf("%s\n", buffer);
+                            goto next;
+                        }
+                    }
+
+                    printf("%s", buffer);
+                }
+                next:
+
+            
+
+                printf("Enter the mail no. to see: ");
+                scanf("%d", &input);
+
+                if(input == -1){
+                    break;
+                }
+
+                memset(buffer, 0, MAXLINE);
+                strcpy(buffer, "RETR ");
+                memset(temp, 0, MAXLINE);
+                sprintf(temp, "%d", input);
+                strcat(buffer, temp);
+
+                strcat(buffer, "\r\n");
+                send(sockfd, buffer, strlen(buffer), 0);
+
+                memset(buffer, 0, MAXLINE);
+                len = recv(sockfd, buffer, MAXLINE, 0);
+                printf("S : %s", buffer);
+                if(strncmp(buffer, "-ERR", 4) == 0){
+                    printf("Error in retrieving mail\n");
+                    close(sockfd);
+                    continue;
+                }
+
+                fflush(stdout);
+                fflush(stdin);
+                char inputchar = getchar();
+
+                if(inputchar == 'd'){
+                    memset(buffer, 0, MAXLINE);
+                    strcpy(buffer, "DELE ");
+                    memset(temp, 0, MAXLINE);
+                    sprintf(temp, "%d", input);
+                    strcat(buffer, temp);
+                    strcat(buffer, "\r\n");
+                    send(sockfd, buffer, strlen(buffer), 0);
+
+                    memset(buffer, 0, MAXLINE);
+                    len = recv(sockfd, buffer, MAXLINE, 0);
+                    if(strncmp(buffer, "-ERR", 4) == 0){
+                        printf("Error in deleting mail\n");
+                        close(sockfd);
+                        continue;
+                    }
+                    if(strncmp(buffer, "+OK", 3) == 0){
+                        printf("Mail deleted\n");
+                    }
+
+                }
+
+
+            }
+
+            if(input == -1){
+                close(sockfd);
+                continue;
+            }
+
+
         }else if(choice == 2){
             int sockfd;
             struct sockaddr_in server_addr;
