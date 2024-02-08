@@ -104,18 +104,6 @@ int main(int argc, char *argv[]){
             // buf[len] = '\0';
             char target_user[100];
 
-            // storing target_user
-            // for(int i = 0; i < strlen(buf); i++){
-            //     if(buf[i] >= 'a' && buf[i] <= 'z'){
-            //         int j = 0;
-            //         while(buf[i] != '\r'){
-            //             target_user[j++] = buf[i++];
-            //         }
-            //         target_user[j] = '\0';
-            //         break;
-            //     }
-            // }
-
             // storing target_username
             // printf("buf = %s\n", buf);
             char target_username[50];
