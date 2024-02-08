@@ -54,7 +54,7 @@ void list(char buf[], int smtp_sockfd, char user[100])
                 // sscanf(line, "From: %[^\n]", emailid);
                 sscanf(start, "%[^\n]", emailid);
                 emailid[strlen(emailid) - 1] = '\0';
-                printf("Email ID: %s\n", emailid);
+                
             }
             // check if line contains "Recieved:"
             else if (strstr(line, "Recieved:") != NULL)
@@ -62,12 +62,12 @@ void list(char buf[], int smtp_sockfd, char user[100])
                 // sscanf(line, "Recieved: %[^\n]", received);
                 sscanf(start, "%[^\n]", received);
                 received[strlen(received) - 1] = '\0';
-                printf("Received: %s\n", received);
+                
                 sno++;
 
                 sprintf(buf, "%d %s %s %s\r\n", sno, emailid, received, subject);
                 send(smtp_sockfd, buf, strlen(buf), 0);
-                printf("sent = %s\n", buf);
+                
 
                 memset(buf, 0, sizeof(buf));
                 memset(received, 0, sizeof(received));
@@ -80,7 +80,7 @@ void list(char buf[], int smtp_sockfd, char user[100])
                 // sscanf(line, "Subject: %[^\n]", subject);
                 sscanf(start, "%[^\n]", subject);
                 subject[strlen(subject) - 1] = '\0';
-                printf("Subject: %s\n", subject);
+                
             }
         }
     }
@@ -219,7 +219,7 @@ int main(int argc, char *argv[])
                         }
                     }
                     pass[j] = '\0';
-                    printf("password = %s\n", pass);
+                    
 
                     fptr = fopen("user.txt", "r");
                     if (fptr == NULL)
@@ -234,7 +234,7 @@ int main(int argc, char *argv[])
                         if (strcmp(token, user) == 0)
                         {
                             token = strtok(NULL, " ");
-                            printf("token = %s\n", token);
+                            
                             token[strlen(token) - 1] = '\0';
                             if (strcmp(token, pass) == 0)
                             {
@@ -364,31 +364,37 @@ int main(int argc, char *argv[])
                     memset(filename, 0, sizeof(filename));
                     strcat(filename, user);
                     strcat(filename, "/mymailbox.txt");
-
-                    // opening the corresponding user's mailbox
                     FILE *old = fopen(filename, "r");
                     if (old == NULL)
                     {
                         perror("Error opening mail file");
                         exit(EXIT_FAILURE);
                     }
+                    printf("filename = %s\n", filename);
+                    // opening the corresponding user's mailbox
+                    
                     char newf[100];
                     memset(newf, 0, sizeof(newf));
-                    FILE *new = fopen("newfile.txt", 'w');
+                    strcat(newf, user);
+                    strcat(newf, "/newfile.txt");
+                    
+                    FILE *new = fopen(newf, "w");
                     if (new == NULL)
                     {
                         perror("Error opening new file");
                         exit(EXIT_FAILURE);
                     }
-
+                    
                     for (int i = 1; i <= count; i++)
-                    {
+                    {   
+                        printf("line = %d\n", i);
                         if (deleted[i] == -1)
                         {
                             continue;
                         }
                         char line[256];
                         int temp = 0;
+                        
                         fseek(old, 0, SEEK_SET);
                         while (fgets(line, sizeof(line), old))
                         {
@@ -404,12 +410,13 @@ int main(int argc, char *argv[])
                                 // }
                                 while (strncmp(line, ".", 1) != 0)
                                 {
-                                    send(smtp_sockfd, line, strlen(line), 0);
+                                    // send(smtp_sockfd, line, strlen(line), 0);
                                     fputs(line, new);
                                     printf("line = %s\n", line);
                                     memset(line, 0, sizeof(line));
                                     fgets(line, sizeof(line), old);
                                 }
+                                fputs(line, new);
                                 break;
                             }
                             // if(strcmp(line, ".\r\n") == 0){
@@ -422,14 +429,15 @@ int main(int argc, char *argv[])
                         }
 
 
-                        fclose(old);
-                        fclose(new);
+                        
 
-                        remove(filename);
-                        rename("newfile.txt", filename);
+                        
                     }
-
+                    fclose(old);
+                    fclose(new);
                     // incomplete
+                    remove(filename);
+                    rename(newf, filename);
                 }
                 else if (strncmp(buf, "LIST", 4) == 0)
                 {
@@ -445,10 +453,7 @@ int main(int argc, char *argv[])
                     mailno_s[strlen(mailno_s) - 1] = '\0';
                     int mailno = atoi(mailno_s);
                     printf("mailno = %d\n", mailno);
-                    // send +OK
-                    memset(buf, 0, sizeof(buf));
-                    sprintf(buf, "+OK\r\n");
-                    send(smtp_sockfd, buf, strlen(buf), 0);
+                    
                     if (deleted[mailno] == -1)
                     {
                         memset(buf, 0, sizeof(buf));
@@ -457,6 +462,10 @@ int main(int argc, char *argv[])
                         continue;
                     }
 
+                    // send +OK
+                    memset(buf, 0, sizeof(buf));
+                    sprintf(buf, "+OK\r\n");
+                    send(smtp_sockfd, buf, strlen(buf), 0);
                     char filename[100];
                     memset(filename, 0, sizeof(filename));
                     strcat(filename, user);
@@ -475,13 +484,13 @@ int main(int argc, char *argv[])
                     int temp = 0;
                     while (fgets(line, sizeof(line), fptr))
                     {
-                        printf("out line = %s\n", line);
+                        
                         if (temp == mailno - 1)
                         {
                             while (strcmp(line, ".\r\n") != 0)
                             {
                                 send(smtp_sockfd, line, strlen(line), 0);
-                                printf("line = %s\n", line);
+                                
                                 memset(line, 0, sizeof(line));
                                 fgets(line, sizeof(line), fptr);
                             }
