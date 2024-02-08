@@ -181,12 +181,12 @@ int main(int argc, char *argv[]){
             
 
 
-            
+            int input;
             while(1){
                 memset(buffer, 0, MAXLINE);
                 strcpy(buffer, "LIST\r\n");
                 send(sockfd, buffer, strlen(buffer), 0);
-                int input = 1;
+                input = 1;
                 int count = 0;
                 memset(buffer, 0, MAXLINE);
                 len = recv(sockfd, buffer, MAXLINE, 0);
@@ -195,7 +195,6 @@ int main(int argc, char *argv[]){
                 if(strncmp(buffer, "-ERR", 4) == 0){
                     printf("Error in listing mails\n");
                     close(sockfd);
-                    input = -1;
                     break;
                 }
                 while(1){
@@ -219,7 +218,13 @@ int main(int argc, char *argv[]){
 
                 printf("Enter the mail no. to see: ");
                 scanf("%d", &input);
+                if(input == -1){
+                    memset(buffer, 0, MAXLINE);
+                    strcpy(buffer, "QUIT\r\n");
 
+                    send(sockfd, buffer, strlen(buffer), 0);
+                    break;
+                }
                 if(input < 1 || input > n){
                     printf("Invalid input\n");
                     printf("Enter the mail no. to see: ");
@@ -229,9 +234,7 @@ int main(int argc, char *argv[]){
                     }
                 }
 
-                if(input == -1){
-                    break;
-                }
+                
 
                 memset(buffer, 0, MAXLINE);
                 strcpy(buffer, "RETR ");
@@ -268,8 +271,11 @@ int main(int argc, char *argv[]){
                 }
                 next1:
 
-                fflush(stdout);
-                char inputchar = getchar();
+                
+                printf("Enter character 'd' to delete above mail\n");
+                while((getchar()) != '\n');
+                char inputchar;
+                inputchar = getchar();
 
                 if(inputchar == 'd'){
                     memset(buffer, 0, MAXLINE);
