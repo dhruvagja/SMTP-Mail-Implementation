@@ -130,7 +130,7 @@ int main(int argc, char *argv[]){
             if(strncmp(buffer, "-ERR", 4) == 0){
                 printf("Invalid user\n");
                 close(sockfd);
-                reutrn 0;
+                return 0;
             }
 
             memset(buffer, 0, MAXLINE);
@@ -145,7 +145,7 @@ int main(int argc, char *argv[]){
             if(strncmp(buffer, "-ERR", 4) == 0){
                 printf("Invalid password\n");
                 close(sockfd);
-                reutrn 0;
+                return 0;
             }
 
             memset(buffer, 0, MAXLINE);
@@ -163,10 +163,11 @@ int main(int argc, char *argv[]){
                 else break;
             }
 
-            for(int j = i; i< strlen(buffer); i++){
-                if(buffer[i] == ' ') break;
-                temp[j-i] = buffer[i]; 
+            for(int j = i; j< strlen(buffer); j++){
+                if(buffer[j] == ' ') break;
+                temp[j-i] = buffer[j]; 
             }
+            printf("temp = %s\n", temp);
             strcat(temp, "\0");
             n = atoi(temp);
             int deleted[n];
