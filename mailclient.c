@@ -151,24 +151,26 @@ int main(int argc, char *argv[]){
             memset(buffer, 0, MAXLINE);
             strcpy(buffer, "STAT\r\n");
             send(sockfd, buffer, strlen(buffer), 0);
+            memset(buffer, 0, MAXLINE);
             len = recv(sockfd, buffer, MAXLINE, 0);
 
             printf("S : %s", buffer);
             int n;
             char temp[MAXLINE];
+
             int i = 3;
-
-            for(i; i< strlen(buffer); i++){
-                if(buffer[i] == ' ') i++;
-                else break;
+            int z = 0;
+            for(i=0; i<strlen(buffer); i++){
+                if(buffer[i] == ' '){
+                    i++;
+                    while(buffer[i] != ' '){
+                        temp[z++] = buffer[i++];
+                    }
+                    break;
+                }
             }
-
-            for(int j = i; j< strlen(buffer); j++){
-                if(buffer[j] == ' ') break;
-                temp[j-i] = buffer[j]; 
-            }
-            printf("temp = %s\n", temp);
-            strcat(temp, "\0");
+            // printf("temp = %s\n", temp);
+            // strcat(temp, "\0");
             n = atoi(temp);
             int deleted[n];
             for(int i = 0; i<n; i++){
@@ -198,7 +200,7 @@ int main(int argc, char *argv[]){
                     memset(buffer, 0, MAXLINE);
                     len = recv(sockfd, buffer, MAXLINE, 0);
 
-                    for(int j = 0; j<n ; j++){
+                    for(int j = 0; j<len ; j++){
                         if(buffer[j] == '.'){
                             memset(temp, 0, MAXLINE);
                             strncpy(temp, buffer, j);
