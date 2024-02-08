@@ -51,7 +51,7 @@ int main(int argc, char *argv[]){
             close(sockfd);
 
             // when connection established with client, send +OK message
-            sprintf(buf, "OK+ POP3 server ready for %d\r\n", inet_ntoa(cli_addr.sin_addr));
+            sprintf(buf, "+OK POP3 server ready for %d\r\n", inet_ntoa(cli_addr.sin_addr));
             send(smtp_sockfd, buf, strlen(buf), 0);
 
             // receving username from client (USER <username>)
@@ -90,13 +90,13 @@ int main(int argc, char *argv[]){
 
                 if(found){
                     memset(buf, 0, sizeof(buf));
-                    sprintf(buf, "OK+ %s is a real hoopy frood\r\n", user);
+                    sprintf(buf, "+OK %s is a real hoopy frood\r\n", user);
                     send(smtp_sockfd, buf, strlen(buf), 0);
 
                 }
                 else{
                     memset(buf, 0, sizeof(buf));
-                    sprintf(buf, "ERR- Sorry no mailbox for %s here\r\n", user);
+                    sprintf(buf, "-ERR Sorry no mailbox for %s here\r\n", user);
                     send(smtp_sockfd, buf, strlen(buf), 0);
                     close(smtp_sockfd);
                     exit(0);
@@ -116,6 +116,7 @@ int main(int argc, char *argv[]){
                         }
                     }
                     pass[j] = '\0';
+                    printf("password = %s\n", pass);
 
                     fptr = fopen("user.txt", "r");
                     if (fptr == NULL) {
@@ -127,6 +128,8 @@ int main(int argc, char *argv[]){
                         char *token = strtok(line, " ");
                         if(strcmp(token, user) == 0){
                             token = strtok(NULL, " ");
+                            printf("token = %s\n", token);
+                            token[strlen(token)-1] = '\0';
                             if(strcmp(token, pass) == 0){
                                 found = 1;
                                 break;
@@ -137,12 +140,13 @@ int main(int argc, char *argv[]){
                     fclose(fptr);
                     if(found){
                         memset(buf, 0, sizeof(buf));
-                        sprintf(buf, "OK+ Mailbox open\r\n");
+                        sprintf(buf, "+OK Mailbox open\r\n");
                         send(smtp_sockfd, buf, strlen(buf), 0);
                     }
                     else{
                         memset(buf, 0, sizeof(buf));
-                        sprintf(buf, "ERR- Invalid password\r\n");
+                        sprintf(buf, "-ERR Invalid password\r\n");
+                        printf("Error on PASS\n");
                         send(smtp_sockfd, buf, strlen(buf), 0);
                         close(smtp_sockfd);
                         exit(0);
@@ -150,7 +154,7 @@ int main(int argc, char *argv[]){
                 }
                 else{
                     memset(buf, 0, sizeof(buf));
-                    sprintf(buf, "ERR- Invalid command\r\n");
+                    sprintf(buf, "-ERR Invalid command\r\n");
                     send(smtp_sockfd, buf, strlen(buf), 0);
                     close(smtp_sockfd);
                     exit(0);
@@ -159,7 +163,7 @@ int main(int argc, char *argv[]){
             }
             else{
                 memset(buf, 0, sizeof(buf));
-                sprintf(buf, "ERR- Invalid command\r\n");
+                sprintf(buf, "-ERR Invalid command\r\n");
                 send(smtp_sockfd, buf, strlen(buf), 0);
                 close(smtp_sockfd);
                 exit(0);
@@ -168,6 +172,7 @@ int main(int argc, char *argv[]){
             // receving STAT command from client
             memset(buf, 0, sizeof(buf));
             recv(smtp_sockfd, buf, 100, 0);
+            printf("stat = %s\n", buf);
             int count = 0;
             if(strncmp(buf, "STAT", 4) == 0){
                 char filename[100];
@@ -190,17 +195,19 @@ int main(int argc, char *argv[]){
                 char line[256];
                 
                 while (fgets(line, sizeof(line), fptr)) {
-                    if(strcmp(line, ".\n") == 0) count++;
+                    // if(strcmp(line, ".\r\n") == 0) count++;
+                    if(strncmp(line, ".", 1) == 0) count++;
                 }
                 
                 fclose(fptr);
                 memset(buf, 0, sizeof(buf));
-                sprintf(buf, "OK+ %d %d\r\n", count, size);
+                sprintf(buf, "+OK %d %d\r\n", count, size);
                 send(smtp_sockfd, buf, strlen(buf), 0);
             }
             else{
                 memset(buf, 0, sizeof(buf));
-                sprintf(buf, "ERR- Invalid command\r\n");
+                sprintf(buf, "-ERR Invalid command\r\n");
+                printf("Error on STAT\n");
                 send(smtp_sockfd, buf, strlen(buf), 0);
                 close(smtp_sockfd);
                 exit(0);
@@ -209,11 +216,12 @@ int main(int argc, char *argv[]){
             // receving LIST command from client
             memset(buf, 0, sizeof(buf));
             recv(smtp_sockfd, buf, 100, 0);
+            printf("list = %s\n", buf);
             if(strncmp(buf, "LIST", 4) == 0){
 
-                // send OK+
+                // send +OK
                 memset(buf, 0, sizeof(buf));
-                sprintf(buf, "OK+\r\n");
+                sprintf(buf, "+OK\r\n");
                 send(smtp_sockfd, buf, strlen(buf), 0);
                 
                 char filename[100];
@@ -230,47 +238,53 @@ int main(int argc, char *argv[]){
 
                 char line[256];
                 memset(buf, 0, sizeof(buf));
-                int sno = 1;
-                sprintf(buf, "%d", sno);
+                int sno = 0;
+                // sprintf(buf, "%d ", sno);
                 char received[100];
+                char emailid[100];
+                char subject[100];
+                char tosend[256];
                 while (fgets(line, sizeof(line), fptr)) {
+                    char *colon_pos = strstr(line, ":");
+                    char *start = colon_pos + 1;
+                    if(colon_pos != NULL){
+                        char *start = colon_pos + 1;
+                        while (*start == ' ') {
+                            start++;
+                        }
                     
-                    if(strncmp(line, "From:", 5)){
-                        char emailid[100];
-                        j = 0;
-                        for(int i=6; i<strlen(line); i++){
-                            emailid[j++] = line[i];
-                        }
-                        emailid[j] = ' ';
-                        // emailid[j+1] = '\0';
-                        strcat(buf, emailid);
+                    // check if line contains "From:"
+                    if (strstr(line, "From:") != NULL) {
+                        // sscanf(line, "From: %[^\n]", emailid);
+                        sscanf(start, "%[^\n]", emailid);
+                        emailid[strlen(emailid)-1] = '\0';
+                        printf("Email ID: %s\n", emailid);
                     }
-
-                    else if(strncmp(line, "Recieved:", 9)){
-                        memset(buf, 0, sizeof(buf));
-                        j = 0;
-                        for(int i=10; i<strlen(line); i++){
-                            received[j++] = line[i];
-                        }
-                        received[j] = ' ';
-                        // received[j+1] = '\0';
-                        // strcat(buf, received);
-                    }
-
-                    else if(strncmp(line, "Subject:", 8)){
-                        char subject[100];
-                        j = 0;
-                        for(int i=9; i<strlen(line); i++){
-                            subject[j++] = line[i];
-                        }
-                        subject[j] = ' ';
-                        strcat(buf, received);
-                        strcat(buf, subject);
-                        strcat(buf, "\r\n");
+                    // check if line contains "Recieved:"
+                    else if (strstr(line, "Recieved:") != NULL) {
+                        // sscanf(line, "Recieved: %[^\n]", received);
+                        sscanf(start, "%[^\n]", received);
+                        received[strlen(received)-1] = '\0';
+                        printf("Received: %s\n", received);
                         sno++;
+
+                        sprintf(buf, "%d %s %s %s\r\n", sno, emailid, received, subject);
                         send(smtp_sockfd, buf, strlen(buf), 0);
+                        printf("sent = %s\n", buf);
+
                         memset(buf, 0, sizeof(buf));
-                        sprintf(buf, "%d", sno);
+                        memset(received, 0, sizeof(received));
+                        memset(emailid, 0, sizeof(emailid));
+                        memset(subject, 0, sizeof(subject));
+                        
+                    }
+                    // check if line contains "Subject:"
+                    else if (strstr(line, "Subject:") != NULL) {
+                        // sscanf(line, "Subject: %[^\n]", subject);
+                        sscanf(start, "%[^\n]", subject);
+                        subject[strlen(subject)-1] = '\0';
+                        printf("Subject: %s\n", subject);                        
+                    }
                     }
 
                 }
@@ -279,17 +293,170 @@ int main(int argc, char *argv[]){
                 sprintf(buf, ".\r\n");
                 send(smtp_sockfd, buf, strlen(buf), 0);
 
-
             }
             else{
                 memset(buf, 0, sizeof(buf));
-                sprintf(buf, "ERR- Invalid command\r\n");
+                sprintf(buf, "-ERR Invalid command\r\n");
+                printf("Error on LIST\n");
                 send(smtp_sockfd, buf, strlen(buf), 0);
                 close(smtp_sockfd);
                 exit(0);
             }
+            
+
+            // looping until client sends QUIT command
+            // server will be giving response to RETR, DELE, RSET
+            int deleted[101] = {0};               // 0 if no mail corresponding to sno, 1 if mail, -1 if deleted
+            for(int i = 1; i <= count; i++){
+                deleted[i] = 1;
+            }
+            while(1){
+                memset(buf, 0, sizeof(buf));
+                recv(smtp_sockfd, buf, 100, 0);
+                printf("buf = %s\n", buf);
+                if(strncmp(buf, "QUIT", 4) == 0){
+                    // delete all marked emails and if success +OK else -ERR and then close the connection saying goodbye
+                    char filename[100];
+                    memset(filename, 0, sizeof(filename));
+                    strcat(filename, user);
+                    strcat(filename, "/mymailbox.txt");
+
+                    // opening the corresponding user's mailbox
+                    FILE *old = fopen(filename, "r");
+                    if (old == NULL) {
+                        perror("Error opening mail file");
+                        exit(EXIT_FAILURE);
+                    }
+                    char newf[100];
+                    memset(newf, 0, sizeof(newf));
+                    FILE *new = fopen("newfile.txt", 'w');
+                    if (new == NULL){
+                        perror("Error opening new file");
+                        exit(EXIT_FAILURE);
+                    }
+
+
+                    for(int i=1; i<=count; i++){
+                        if(deleted[i] == -1){
+                            continue;
+                        }
+                        char line[256];
+                        int temp = 0;
+                        fseek(old, 0, SEEK_SET);
+                        while (fgets(line, sizeof(line), old)) {
+                            printf("out line = %s\n", line);
+                            if(temp == i - 1){
+                                // while(strcmp(line, ".\r\n") != 0){
+                                //     // send(smtp_sockfd, line, strlen(line), 0);
+                                //     fputs(line, new);
+                                //     printf("line = %s\n", line);    
+                                //     memset(line, 0, sizeof(line));
+                                //     fgets(line, sizeof(line), old);
+                                // }
+                                while(strncmp(line, ".", 1) != 0){
+                                    send(smtp_sockfd, line, strlen(line), 0);
+                                    fputs(line, new);
+                                    printf("line = %s\n", line);    
+                                    memset(line, 0, sizeof(line));
+                                    fgets(line, sizeof(line), old);
+                                }
+                                break;
+                            }
+                            // if(strcmp(line, ".\r\n") == 0){
+                            //     temp++;
+                            // }
+                            if(strncmp(line, ".", 1) == 0){
+                                temp++;
+                            }
+                        }
+
+                    }
+
+                    //incomplete
+                }
+                else if(strncmp(buf, "RETR", 4) == 0){
+                    char mailno_s[4];
+                    for(int i=5; i<strlen(buf); i++){
+                        mailno_s[i-5] = buf[i];
+                    }
+                    mailno_s[strlen(mailno_s)-1] = '\0';
+                    int mailno = atoi(mailno_s); 
+                    printf("mailno = %d\n", mailno);
+                    // send +OK
+                    memset(buf, 0, sizeof(buf));
+                    sprintf(buf, "+OK\r\n");
+                    send(smtp_sockfd, buf, strlen(buf), 0);
+                    if(deleted[mailno] == -1){
+                        memset(buf, 0, sizeof(buf));
+                        sprintf(buf, "-ERR Mail %d was deleted\r\n", mailno);
+                        send(smtp_sockfd, buf, strlen(buf), 0);
+                        continue;
+                    }
+                    
+                    char filename[100];
+                    memset(filename, 0, sizeof(filename));
+                    strcat(filename, user);
+                    strcat(filename, "/mymailbox.txt");
+
+                    // opening the corresponding user's mailbox
+                    FILE *fptr = fopen(filename, "r");
+                    if (fptr == NULL) {
+                        perror("Error opening mail file");
+                        exit(EXIT_FAILURE);
+                    }
+
+                    // selecting the mail with corresponding mailno (sno)
+                    char line[256];
+                    int temp = 0;
+                    while (fgets(line, sizeof(line), fptr)) {
+                        printf("out line = %s\n", line);
+                        if(temp == mailno - 1){
+                            while(strcmp(line, ".\r\n") != 0){
+                                send(smtp_sockfd, line, strlen(line), 0);
+                                printf("line = %s\n", line);    
+                                memset(line, 0, sizeof(line));
+                                fgets(line, sizeof(line), fptr);
+                            }
+                            break;
+                        }
+                        if(strcmp(line, ".\r\n") == 0){
+                            temp++;
+                        }
+                    }
+                    fclose(fptr);
+                    memset(buf, 0, sizeof(buf));
+                    sprintf(buf, ".\r\n");
+                    send(smtp_sockfd, buf, strlen(buf), 0);
+                }
+                else if(strncmp(buf, "DELE", 4) == 0){
+                    char mailno_s[4];
+                    for(int i=5; i<strlen(buf); i++){
+                        mailno_s[i-5] = buf[i];
+                    }
+                    mailno_s[strlen(mailno_s)-1] = '\0';
+                    int mailno = atoi(mailno_s); 
+
+                    if(deleted[mailno] == -1){
+                        memset(buf, 0, sizeof(buf));
+                        sprintf(buf, "-ERR %d already deleted\r\n", mailno);
+                        send(smtp_sockfd, buf, strlen(buf), 0);
+                        continue;
+                    }
+
+                    deleted[mailno] = -1;
+                    memset(buf, 0, sizeof(buf));
+                    sprintf(buf, "+Ok mail %d deleted\r\n", mailno);
+                    send(smtp_sockfd, buf, strlen(buf), 0);
+                }
+            }
+            
+
+            close(smtp_sockfd);
+            exit(0);
 
         }
+        
+        close(smtp_sockfd);
     
     }
 
