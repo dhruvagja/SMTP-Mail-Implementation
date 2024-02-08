@@ -178,24 +178,26 @@ int main(int argc, char *argv[]){
             }
             printf("You have %d mails\n", n);
 
-            memset(buffer, 0, MAXLINE);
-            strcpy(buffer, "LIST\r\n");
-            send(sockfd, buffer, strlen(buffer), 0);
-            int input = 1;
-            int count = 0;
-            memset(buffer, 0, MAXLINE);
-            len = recv(sockfd, buffer, MAXLINE, 0);
-            printf("S : %s", buffer);
-
-            if(strncmp(buffer, "-ERR", 4) == 0){
-                printf("Error in listing mails\n");
-                close(sockfd);
-                continue;
-            }
+            
 
 
             
             while(1){
+                memset(buffer, 0, MAXLINE);
+                strcpy(buffer, "LIST\r\n");
+                send(sockfd, buffer, strlen(buffer), 0);
+                int input = 1;
+                int count = 0;
+                memset(buffer, 0, MAXLINE);
+                len = recv(sockfd, buffer, MAXLINE, 0);
+                printf("S : %s", buffer);
+
+                if(strncmp(buffer, "-ERR", 4) == 0){
+                    printf("Error in listing mails\n");
+                    close(sockfd);
+                    input = -1;
+                    break;
+                }
                 while(1){
                     memset(buffer, 0, MAXLINE);
                     len = recv(sockfd, buffer, MAXLINE, 0);
@@ -208,7 +210,7 @@ int main(int argc, char *argv[]){
                             goto next;
                         }
                     }
-
+                    
                     printf("%s", buffer);
                 }
                 next:
@@ -217,6 +219,15 @@ int main(int argc, char *argv[]){
 
                 printf("Enter the mail no. to see: ");
                 scanf("%d", &input);
+
+                if(input < 1 || input > n){
+                    printf("Invalid input\n");
+                    printf("Enter the mail no. to see: ");
+                    scanf("%d", &input);
+                    if(input > 0 && input <= n){
+                        break;
+                    }
+                }
 
                 if(input == -1){
                     break;
@@ -236,12 +247,28 @@ int main(int argc, char *argv[]){
                 printf("S : %s", buffer);
                 if(strncmp(buffer, "-ERR", 4) == 0){
                     printf("Error in retrieving mail\n");
-                    close(sockfd);
                     continue;
+                    
                 }
 
+                while(1){
+                    memset(buffer, 0, MAXLINE);
+                    len = recv(sockfd, buffer, MAXLINE, 0);
+
+                    for(int j = 0; j<len ; j++){
+                        if(buffer[j] == '.'){
+                            memset(temp, 0, MAXLINE);
+                            strncpy(temp, buffer, j);
+                            printf("%s\n", buffer);
+                            goto next1;
+                        }
+                    }
+                    
+                    printf("%s", buffer);
+                }
+                next1:
+
                 fflush(stdout);
-                fflush(stdin);
                 char inputchar = getchar();
 
                 if(inputchar == 'd'){
@@ -270,6 +297,7 @@ int main(int argc, char *argv[]){
             }
 
             if(input == -1){
+
                 close(sockfd);
                 continue;
             }
