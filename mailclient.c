@@ -189,13 +189,14 @@ int main(int argc, char *argv[]){
             len = recv(sockfd, buffer, MAXLINE, 0);
             
             memset(buffer, 0, MAXLINE);
-            strcpy(buffer, "RCPT ");
-            strcat(buffer, "TO: ");
+            strcpy(buffer, "RCPT TO: ");
             char cleaned_to[MAXLINE];
             memset(cleaned_to, 0, MAXLINE);
+            strcat(cleaned_to,"<");
             strcat(cleaned_to, to_username);
             strcat(cleaned_to, "@");
             strcat(cleaned_to, server_ip);
+            strcat(cleaned_to, ">");
             strcat(buffer, cleaned_to);
             strcat(buffer, "\r\n");
             send(sockfd, buffer, strlen(buffer), 0);
