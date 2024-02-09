@@ -264,7 +264,16 @@ int main(int argc, char *argv[]){
                     len = recv(sockfd, buffer, MAXLINE, 0);
 
                     for(int j = 0; j<len ; j++){
-                        if(buffer[j] == '.'){
+                       
+                        if(buffer[j] == '.' && (j+1 < len) && buffer[j+1] == '\r'&& (j+2 < len) && buffer[j+2] == '\n'){
+                            fputs(buffer, file);
+                            goto next3;
+                        }
+                        else if(buffer[j] == '\r' && (j+1)<len && buffer[j+1] == '\n' && j+2 < len &&buffer[j+2] == '.'){
+                            fputs(buffer, file);
+                            goto next3;
+                        }
+                        else if(buffer[j] == '\n' && (j+1)<len && buffer[j+1] == '.'){
                             fputs(buffer, file);
                             goto next3;
                         }
@@ -273,17 +282,9 @@ int main(int argc, char *argv[]){
                     fputs(buffer, file);
                 }
                 next3:
-                
-
-
             }
             fclose(file);
             listing();
-
-
-            
-
-
 
             int input;
             int delete[n+1];
@@ -386,7 +387,19 @@ int main(int argc, char *argv[]){
                     len = recv(sockfd, buffer, MAXLINE, 0);
 
                     for(int j = 0; j<len ; j++){
-                        if(buffer[j] == '.'){
+                        if(buffer[j] == '.' && (j+1 < len) && buffer[j+1] == '\r'&& (j+2 < len) && buffer[j+2] == '\n'){
+                            memset(temp, 0, MAXLINE);
+                            strncpy(temp, buffer, j);
+                            printf("%s\n", buffer);
+                            goto next1;
+                        }
+                        else if(buffer[j] == '\r' && (j+1)<len && buffer[j+1] == '\n' && j+2 < len &&buffer[j+2] == '.'){
+                            memset(temp, 0, MAXLINE);
+                            strncpy(temp, buffer, j);
+                            printf("%s\n", buffer);
+                            goto next1;
+                        }
+                        else if(buffer[j] == '\n' && (j+1)<len && buffer[j+1] == '.'){
                             memset(temp, 0, MAXLINE);
                             strncpy(temp, buffer, j);
                             printf("%s\n", buffer);
@@ -612,10 +625,6 @@ int main(int argc, char *argv[]){
                 printf("Mail sent successfully\n");
 
             }
-
-
-
-
 
         }else if(choice == 3){
             break;

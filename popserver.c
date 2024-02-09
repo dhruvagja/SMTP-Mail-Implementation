@@ -8,87 +8,6 @@
 #include <arpa/inet.h>
 #include <fcntl.h>
 
-void list(char buf[], int pop_sockfd, char user[100])
-{
-    // send +OK
-    memset(buf, 0, sizeof(buf));
-    sprintf(buf, "+OK\r\n");
-    send(pop_sockfd, buf, strlen(buf), 0);
-
-    char filename[100];
-    memset(filename, 0, sizeof(filename));
-    strcat(filename, user);
-    strcat(filename, "/mymailbox.txt");
-
-    // opening the corresponding user's mailbox
-    FILE *fptr = fopen(filename, "r");
-    if (fptr == NULL)
-    {
-        perror("Error opening mail file");
-        exit(EXIT_FAILURE);
-    }
-
-    char line[256];
-    memset(buf, 0, sizeof(buf));
-    int sno = 0;
-    // sprintf(buf, "%d ", sno);
-    char received[100];
-    char emailid[100];
-    char subject[100];
-    char tosend[256];
-    while (fgets(line, sizeof(line), fptr))
-    {
-        char *colon_pos = strstr(line, ":");
-        char *start = colon_pos + 1;
-        if (colon_pos != NULL)
-        {
-            char *start = colon_pos + 1;
-            while (*start == ' ')
-            {
-                start++;
-            }
-
-            // check if line contains "From:"
-            if (strstr(line, "From:") != NULL)
-            {
-                // sscanf(line, "From: %[^\n]", emailid);
-                sscanf(start, "%[^\n]", emailid);
-                emailid[strlen(emailid) - 1] = '\0';
-                
-            }
-            // check if line contains "Recieved:"
-            else if (strstr(line, "Recieved:") != NULL)
-            {
-                // sscanf(line, "Recieved: %[^\n]", received);
-                sscanf(start, "%[^\n]", received);
-                received[strlen(received) - 1] = '\0';
-                
-                sno++;
-
-                sprintf(buf, "%d %s %s %s\r\n", sno, emailid, received, subject);
-                send(pop_sockfd, buf, strlen(buf), 0);
-                
-
-                memset(buf, 0, sizeof(buf));
-                memset(received, 0, sizeof(received));
-                memset(emailid, 0, sizeof(emailid));
-                memset(subject, 0, sizeof(subject));
-            }
-            // check if line contains "Subject:"
-            else if (strstr(line, "Subject:") != NULL)
-            {
-                // sscanf(line, "Subject: %[^\n]", subject);
-                sscanf(start, "%[^\n]", subject);
-                subject[strlen(subject) - 1] = '\0';
-                
-            }
-        }
-    }
-    fclose(fptr);
-    memset(buf, 0, sizeof(buf));
-    sprintf(buf, ".\r\n");
-    send(pop_sockfd, buf, strlen(buf), 0);
-}
 
 
 void send_list(char buf[], int pop_sockfd, char user[100], int mailnum, int flag){
@@ -473,7 +392,7 @@ int main(int argc, char *argv[])
                                 //     memset(line, 0, sizeof(line));
                                 //     fgets(line, sizeof(line), old);
                                 // }
-                                while (strncmp(line, ".", 1) != 0)
+                                while (strcmp(line, ".\r\n") != 0 || strcmp(line, ".\n") != 0)
                                 {
                                     // send(pop_sockfd, line, strlen(line), 0);
                                     fputs(line, new);
@@ -487,20 +406,15 @@ int main(int argc, char *argv[])
                             // if(strcmp(line, ".\r\n") == 0){
                             //     temp++;
                             // }
-                            if (strncmp(line, ".", 1) == 0)
+                            if (strcmp(line, ".\r\n") == 0 || strcmp(line, ".\n") == 0)
                             {
                                 temp++;
                             }
                         }
-
-
-                        
-
-                        
+    
                     }
                     fclose(old);
                     fclose(new);
-                    // incomplete
                     remove(filename);
                     rename(newf, filename);
                 }
@@ -528,7 +442,7 @@ int main(int argc, char *argv[])
                     while (fgets(line, sizeof(line), fptr))
                     {
                         // if(strcmp(line, ".\r\n") == 0) count++;
-                        if (strncmp(line, ".", 1) == 0)
+                        if (strcmp(line, ".\r\n") == 0 || strcmp(line, ".\n") == 0)
                             count++;
                     }
 
@@ -613,7 +527,7 @@ int main(int argc, char *argv[])
                         
                         if (temp == mailno - 1)
                         {
-                            while (strcmp(line, ".\r\n") != 0)
+                            while (strcmp(line, ".\r\n") != 0 || strcmp(line, ".\n") != 0)
                             {
                                 send(pop_sockfd, line, strlen(line), 0);
                                 
@@ -622,7 +536,7 @@ int main(int argc, char *argv[])
                             }
                             break;
                         }
-                        if (strcmp(line, ".\r\n") == 0)
+                        if (strcmp(line, ".\r\n") == 0 || strcmp(line, ".\n") == 0)
                         {
                             temp++;
                         }

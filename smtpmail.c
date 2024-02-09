@@ -42,7 +42,7 @@ int main(int argc, char *argv[]){
 
     int pid;
 
-
+    
     while(1){
         clilen = sizeof(cli_addr);
         smtp_sockfd = accept(sockfd, (struct sockaddr *)&cli_addr, &clilen);
@@ -56,9 +56,10 @@ int main(int argc, char *argv[]){
         if(fork() == 0){
             close(sockfd);
             printf("Connection established with %s:%d\n", inet_ntoa(cli_addr.sin_addr), ntohs(cli_addr.sin_port));
+            
+            // send the welcome message
             memset(buf, 0, sizeof(buf));
             sprintf(buf, "220 <%s> Service ready\r\n", inet_ntoa(cli_addr.sin_addr));
-            
             send(smtp_sockfd, buf, strlen(buf), 0);
             memset(buf, 0, sizeof(buf));
 
@@ -68,14 +69,17 @@ int main(int argc, char *argv[]){
             while(1){
                 memset(buf, 0, sizeof(buf));
                 ssize_t len = recv(smtp_sockfd, buf, 100, 0);
-
+                
+                // if HELO message sent by client
                 if(strncmp(buf, "HELO", 4) == 0){
                     memset(buf, 0, sizeof(buf));
                     sprintf(buf, "250 OK Hello %s\r\n", inet_ntoa(cli_addr.sin_addr));
                     send(smtp_sockfd, buf, strlen(buf), 0);
                     hello = 1;
                 }
+                // if MAIL message sent by client
                 else if(strncmp(buf, "MAIL", 4) == 0){
+                    // if HELO message is not sent by client
                     if(hello == 0){
                         memset(buf, 0, sizeof(buf));
                         sprintf(buf, "503 Bad sequence of commands\r\n");
@@ -83,6 +87,7 @@ int main(int argc, char *argv[]){
                         continue;
                     }
                     char sending_user[100];  
+                    // storing sending_user
                     for(int i = 0; i < strlen(buf); i++){
                         if(buf[i] == '<'){
                             i++;
@@ -96,12 +101,12 @@ int main(int argc, char *argv[]){
                     }
                     memset(buf, 0, sizeof(buf));
                     sprintf(buf, "250<%s>... Sender ok\r\n", sending_user);
-                    
                     send(smtp_sockfd, buf, strlen(buf), 0);
                     mail = 1;
                 }
+                // if RCPT message sent by client
                 else if(strncmp(buf, "RCPT", 4) == 0){
-                     
+                    // if MAIL command is not sent by the client
                     if(mail == 0){
                         memset(buf, 0, sizeof(buf));
                         sprintf(buf, "503 Bad sequence of commands\r\n");
@@ -109,7 +114,6 @@ int main(int argc, char *argv[]){
                         continue;
                     }
                     // storing target_username
-                    // printf("buf = %s\n", buf);
                     memset(target_username, 0, sizeof(target_username));
                     int i;
                     for(i = 0; i < strlen(buf); i++){
@@ -122,11 +126,7 @@ int main(int argc, char *argv[]){
                             break;
                         }
                     }
-                    // target_username[i] = '\0';
-
-                    // search for target_username in user.txt file
-                    // char *filename_ = malloc(strlen(BASE_DIR) + strlen("user.txt") + 1);
-                    // snprintf(filename_, sizeof(filename_), "%suser.txt", BASE_DIR);
+                    // opening the file containing the list of users
                     FILE *fptr = fopen("user.txt", "r");
                     if (fptr == NULL) {
                         perror("Error opening user file");
@@ -134,6 +134,8 @@ int main(int argc, char *argv[]){
                     }
                     char line[256];
                     int found = 0;
+
+                    // checking if the recipient is present in the list of users
                     while (fgets(line, sizeof(line), fptr)) {
                         char *token = strtok(line, " ");
                         if(strcmp(token, target_username) == 0){
@@ -158,7 +160,9 @@ int main(int argc, char *argv[]){
                         continue;
                     }
                 }
+                // if DATA message sent by client
                 else if(strncmp(buf,"DATA", 4) == 0){
+                    // if RCPT command is not sent by the client
                     if(rcpt == 0){
                         memset(buf, 0, sizeof(buf));
                         sprintf(buf, "503 Bad sequence of commands\r\n");
@@ -168,8 +172,6 @@ int main(int argc, char *argv[]){
                     memset(buf, 0, sizeof(buf));
                     sprintf(buf, "354 Enter mail, end with \".\" on a line by itself\r\n");
                     send(smtp_sockfd, buf, strlen(buf), 0);
-                    
-
 
                     char filename[200];
                     memset(filename, 0, sizeof(filename));
@@ -194,11 +196,11 @@ int main(int argc, char *argv[]){
                     strftime(timestring, sizeof(timestring), "%d-%m-%Y %H:%M:%S", timeinfo);
                     memset(recieved, 0, sizeof(recieved));
                     sprintf(recieved, "Recieved: %s", timestring);
-                    // receiving the mail and storing in the mymailvox.txt file corresponding to the target user
+
+                    // receiving the mail and storing in the mymailbox.txt file corresponding to the target user
                     while (1) {
                         memset(buf, 0, sizeof(buf));
                         ssize_t n = recv(smtp_sockfd, buf, 100, 0);
-                        // check
                         buf[n] = '\0';
 
                         int flag = 1;
@@ -217,7 +219,15 @@ int main(int argc, char *argv[]){
                                     
                                 }
                             }
-                            if(buf[i] == '\r' && buf[i+1] == '\n' && buf[i+2] == '.'){
+                            if(buf[i] == '\r' &&(i+2 < n)&& buf[i+1] == '\n' && buf[i+2] == '.'){
+                                if(flag)fprintf(file, "%s", buf);
+                                goto exit;
+                            }
+                            else if(buf[i] == '\n' && (i+1 < n) &&buf[i+1] == '.'){
+                                if(flag)fprintf(file, "%s", buf);
+                                goto exit;
+                            }
+                            else if(buf[i] == '.' && (i+1 < n) && buf[i+1] == '\r'){
                                 if(flag)fprintf(file, "%s", buf);
                                 goto exit;
                             }
@@ -236,6 +246,7 @@ int main(int argc, char *argv[]){
                     send(smtp_sockfd, buf, strlen(buf), 0);
                 }
                 else if(strncmp(buf, "QUIT", 4) == 0){
+                    // if DATA command is not sent by the client
                     memset(buf, 0, sizeof(buf));
                     sprintf(buf, "221 %s closing connection\r\n", inet_ntoa(cli_addr.sin_addr));
                     send(smtp_sockfd, buf, strlen(buf), 0);
