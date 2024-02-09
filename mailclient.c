@@ -10,8 +10,7 @@
 
 #define MAXLINE 100
 
-
-
+// Function to list the mails in the given fomat in a temprory file
 void listing(){
     FILE * list = fopen("list.txt", "w");
     FILE * temp = fopen("temp.txt", "r");
@@ -63,6 +62,8 @@ void listing(){
     return;
 }
 
+
+// Function to check if the given string is in the format of "xxxxxxxx@xxxxxx"
 int check_xy(char str[], char *username){
     
     int cnt = 0, space = 0;
@@ -94,6 +95,8 @@ int check_xy(char str[], char *username){
 
 }
 
+
+// Function to replace '\n' with '\r\n' in the given buffer
 void replace(char *buffer){
     size_t len = strlen(buffer);
     if(buffer[len-1] == '\n'){
@@ -140,10 +143,11 @@ int main(int argc, char *argv[]){
         printf("Choice = ");
         scanf("%d", &choice);
 
+        // If use wants to manage mail
         if(choice == 1){
             int sockfd;
             struct sockaddr_in server_addr;
-
+            //Creating socket
             if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
                 perror("Error in creating socket\n");
                 exit(0);
@@ -152,7 +156,7 @@ int main(int argc, char *argv[]){
             server_addr.sin_family = AF_INET;
             inet_aton(server_ip, &server_addr.sin_addr);
             server_addr.sin_port = htons(pop3_port);
-
+            //Connecting to server
             if((connect(sockfd, (struct sockaddr *) &server_addr, sizeof(server_addr))) < 0){
                 perror("Unable to connect to server\n");
                 exit(0);
@@ -169,7 +173,7 @@ int main(int argc, char *argv[]){
                 close(sockfd);
                 continue;
             }
-
+            //Sending username and password
             memset(buffer, 0, MAXLINE);
             strcpy(buffer, "USER ");
             strcat(buffer, user);
@@ -194,13 +198,14 @@ int main(int argc, char *argv[]){
 
             memset(buffer, 0, MAXLINE);
             len = recv(sockfd, buffer, MAXLINE, 0);
-
+            //Checking password
             if(strncmp(buffer, "-ERR", 4) == 0){
                 printf("Invalid password\n");
                 close(sockfd);
                 return 0;
             }
 
+            //Using command STAT to get the number of mails
             memset(buffer, 0, MAXLINE);
             strcpy(buffer, "STAT\r\n");
             send(sockfd, buffer, strlen(buffer), 0);
@@ -231,11 +236,7 @@ int main(int argc, char *argv[]){
             }
             printf("\nYou have %d mails\n\n", n);
 
-            
-
-
-            
-
+            //Using command RETF to recieve all mails to create list in the given format
             memset(buffer, 0, MAXLINE);
             FILE *file = fopen("temp.txt", "w");
             for(int i = 0; i< n; i++){
@@ -284,21 +285,18 @@ int main(int argc, char *argv[]){
                 next3:
             }
             fclose(file);
+            //Creating list of mails
             listing();
 
+            //
             int input;
             int delete[n+1];
             for(int i = 1; i<=n; i++){
                 delete[i] = 0;
             }
 
-
-
-
             while(1){
                 
-                
-
                 FILE *list = fopen("list.txt", "r");
                 char line[256];
 
@@ -316,6 +314,7 @@ int main(int argc, char *argv[]){
 
                 printf("\nEnter the mail no. to see: ");
                 scanf("%d", &input);
+                // if input is -1 then quit
                 if(input == -1){
                     memset(buffer, 0, MAXLINE);
                     strcpy(buffer, "QUIT\r\n");
@@ -323,6 +322,7 @@ int main(int argc, char *argv[]){
                     send(sockfd, buffer, strlen(buffer), 0);
                     break;
                 }
+                // Check for valid input
                 while(input < 1 || input > n){
                     printf("Invalid input\n");
                     printf("\nEnter the mail no. to see: ");
@@ -333,7 +333,7 @@ int main(int argc, char *argv[]){
                 }
 
                 
-                printf("input = %d\n", input);
+                // Using command RETR to recieve the mail body
                 memset(buffer, 0, MAXLINE);
                 strcpy(buffer, "RETR ");
                 memset(temp, 0, MAXLINE);
@@ -351,9 +351,9 @@ int main(int argc, char *argv[]){
                     continue;
                     
                 }
-
+                // Recieveing mail body
                 while(1){
-                    printf("in while\n");
+                    
                     memset(buffer, 0, MAXLINE);
                     len = recv(sockfd, buffer, MAXLINE, 0);
 
@@ -390,6 +390,7 @@ int main(int argc, char *argv[]){
 
                 if(inputchar == 'd'){
                     memset(buffer, 0, MAXLINE);
+                    //Using command DELE to delete the mail
                     strcpy(buffer, "DELE ");
                     memset(temp, 0, MAXLINE);
                     sprintf(temp, "%d", input);
@@ -425,7 +426,9 @@ int main(int argc, char *argv[]){
             }
              
 
-        }else if(choice == 2){
+        }
+        //If user wants to send mail
+        else if(choice == 2){
             int sockfd;
             struct sockaddr_in server_addr;
 
@@ -459,6 +462,7 @@ int main(int argc, char *argv[]){
                 i++;
                 fgets(body[i], MAXLINE,stdin);
             }while(strcmp(body[i], ".\n") != 0);
+            //checking the format of the mail
             char domain[MAXLINE];
             for(int j = 0; j< MAXLINE; j++){
                 if(from[j] == '@'){
@@ -476,11 +480,12 @@ int main(int argc, char *argv[]){
                 }
 
             }
+
             if(strcmp(domain, server_ip) != 0){
                 printf("Domain of the sender should be the ip address fo the server\n");
                 continue;
             }
-
+            //Checking the format of from, to and subject
             if((strncmp(from, "From:", 5) != 0) || (strncmp(to, "To:", 3) != 0) || (strncmp(subject, "Subject:", 8) != 0)){
                 printf("Incorrect format\n");
                 continue;
@@ -494,6 +499,7 @@ int main(int argc, char *argv[]){
                     break;
                 }
             }
+            
             strncpy(from_username, from+pos, strlen(from)-pos-1);
             if(!check_xy(from_username,user)){
                 printf("Incorrect format\n");
@@ -516,7 +522,7 @@ int main(int argc, char *argv[]){
             char buffer[MAXLINE];
             memset(buffer, 0, MAXLINE);
             ssize_t len = recv(sockfd, buffer, MAXLINE, 0);
-            
+            // Send command HELO to server to identity
             memset(buffer, 0, MAXLINE);
             strcpy(buffer, "HELO ");
             strcat(buffer, server_ip);
@@ -527,6 +533,7 @@ int main(int argc, char *argv[]){
             len = recv(sockfd, buffer, MAXLINE, 0);
             
             memset(buffer, 0, MAXLINE);
+            // Send command MAIL to server to verify senders mail
             strcpy(buffer, "MAIL ");
             strcat(buffer, "FROM: <");
             char cleaned_from[MAXLINE];
@@ -543,7 +550,7 @@ int main(int argc, char *argv[]){
             
             memset(buffer, 0, MAXLINE);
             len = recv(sockfd, buffer, MAXLINE, 0);
-            
+            //Sending command RCPT to server to verify recievers mail
             memset(buffer, 0, MAXLINE);
             strcpy(buffer, "RCPT TO: ");
             char cleaned_to[MAXLINE];
@@ -572,6 +579,8 @@ int main(int argc, char *argv[]){
             }else if(code == 250){
                 
                 memset(buffer, 0, MAXLINE);
+
+                //Sending command DATA to server to send the mail
                 strcpy(buffer, "DATA\r\n");
                 send(sockfd, buffer, strlen(buffer), 0);
                 
@@ -605,6 +614,7 @@ int main(int argc, char *argv[]){
                 memset(buffer, 0, MAXLINE);
                 len = recv(sockfd, buffer, MAXLINE, 0);
                 memset(buffer, 0, MAXLINE);
+                //Sending command QUIT to server to quit
                 strcpy(buffer, "QUIT\r\n");
                 send(sockfd, buffer, strlen(buffer), 0);
                 
