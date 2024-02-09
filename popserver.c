@@ -201,7 +201,6 @@ int main(int argc, char *argv[])
                         }
                     }
                     pass[j] = '\0';
-                    printf("pass = %s\n", pass);
 
                     fptr = fopen("user.txt", "r");
                     if (fptr == NULL)
@@ -217,9 +216,7 @@ int main(int argc, char *argv[])
                         if (strcmp(token, user) == 0)
                         {
                             token = strtok(NULL, " ");
-                            printf("pehle token = %s\n", token);
                             if(token[strlen(token) - 1] == '\n')token[strlen(token) - 1] = '\0';
-                            printf("token = %s\n", token);
                             if (strcmp(token, pass) == 0)
                             {
                                 found = 1;
