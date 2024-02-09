@@ -8,8 +8,7 @@
 #include <arpa/inet.h>
 #include <fcntl.h>
 
-
-
+// function to send the list of mails to the client
 void send_list(char buf[], int pop_sockfd, char user[100], int mailnum, int flag){
     char filename[100];
     memset(filename, 0, sizeof(filename));
@@ -40,7 +39,7 @@ void send_list(char buf[], int pop_sockfd, char user[100], int mailnum, int flag
         
         if (temp == mailnum - 1)
         {
-            while (strcmp(line, ".\r\n") != 0)
+            while (strncmp(line, ".", 1) != 0)
             {
                 for(int i = 0; i < strlen(line); i++){
                     wc++;
@@ -49,7 +48,7 @@ void send_list(char buf[], int pop_sockfd, char user[100], int mailnum, int flag
             }
             break;
         }
-        if (strcmp(line, ".\r\n") == 0)
+        if (strncmp(line, ".", 1) == 0)
         {
             temp++;
         }
@@ -116,7 +115,7 @@ int main(int argc, char *argv[])
             close(sockfd);
 
             // when connection established with client, send +OK message
-            sprintf(buf, "+OK POP3 server ready for %d\r\n", inet_ntoa(cli_addr.sin_addr));
+            sprintf(buf, "+OK POP3 server ready for %s\r\n", inet_ntoa(cli_addr.sin_addr));
             send(pop_sockfd, buf, strlen(buf), 0);
 
             // receving username from client (USER <username>)
@@ -255,55 +254,6 @@ int main(int argc, char *argv[])
                 exit(0);
             }
 
-            // receving STAT command from client
-            // memset(buf, 0, sizeof(buf));
-            // recv(pop_sockfd, buf, 100, 0);
-            // printf("stat = %s\n", buf);
-            // int count = 0;
-            // if (strncmp(buf, "STAT", 4) == 0)
-            // {
-            //     char filename[100];
-            //     memset(filename, 0, sizeof(filename));
-            //     strcat(filename, user);
-            //     strcat(filename, "/mymailbox.txt");
-
-            //     // opening the corresponding user's mailbox
-            //     FILE *fptr = fopen(filename, "r");
-            //     if (fptr == NULL)
-            //     {
-            //         perror("Error opening mail file");
-            //         exit(EXIT_FAILURE);
-            //     }
-
-            //     // get the size of the mailbox in octets
-            //     fseek(fptr, 0, SEEK_END);
-            //     int size = ftell(fptr);
-            //     fseek(fptr, 0, SEEK_SET);
-
-            //     char line[256];
-
-            //     while (fgets(line, sizeof(line), fptr))
-            //     {
-            //         // if(strcmp(line, ".\r\n") == 0) count++;
-            //         if (strncmp(line, ".", 1) == 0)
-            //             count++;
-            //     }
-
-            //     fclose(fptr);
-            //     memset(buf, 0, sizeof(buf));
-            //     sprintf(buf, "+OK %d %d\r\n", count, size);
-            //     send(pop_sockfd, buf, strlen(buf), 0);
-            // }
-            // else
-            // {
-            //     memset(buf, 0, sizeof(buf));
-            //     sprintf(buf, "-ERR Invalid command\r\n");
-            //     printf("Error on STAT\n");
-            //     send(pop_sockfd, buf, strlen(buf), 0);
-            //     close(pop_sockfd);
-            //     exit(0);
-            // }
-
             
             char filename[100];
             memset(filename, 0, sizeof(filename));
@@ -371,7 +321,7 @@ int main(int argc, char *argv[])
                     
                     for (int i = 1; i <= count; i++)
                     {   
-                        printf("line = %d\n", i);
+                        // printf("line = %d\n", i);
                         if (deleted[i] == -1)
                         {
                             continue;
@@ -382,7 +332,7 @@ int main(int argc, char *argv[])
                         fseek(old, 0, SEEK_SET);
                         while (fgets(line, sizeof(line), old))
                         {
-                            printf("out line = %s\n", line);
+                            //printf("out line = %s\n", line);
                             if (temp == i - 1)
                             {
                                 // while(strcmp(line, ".\r\n") != 0){
@@ -392,11 +342,11 @@ int main(int argc, char *argv[])
                                 //     memset(line, 0, sizeof(line));
                                 //     fgets(line, sizeof(line), old);
                                 // }
-                                while (strcmp(line, ".\r\n") != 0 || strcmp(line, ".\n") != 0)
+                                while (strncmp(line, ".", 1) != 0)
                                 {
                                     // send(pop_sockfd, line, strlen(line), 0);
                                     fputs(line, new);
-                                    printf("line = %s\n", line);
+                                    //printf("line = %s\n", line);
                                     memset(line, 0, sizeof(line));
                                     fgets(line, sizeof(line), old);
                                 }
@@ -406,7 +356,7 @@ int main(int argc, char *argv[])
                             // if(strcmp(line, ".\r\n") == 0){
                             //     temp++;
                             // }
-                            if (strcmp(line, ".\r\n") == 0 || strcmp(line, ".\n") == 0)
+                            if (strncmp(line, ".", 1) == 0)
                             {
                                 temp++;
                             }
@@ -442,9 +392,10 @@ int main(int argc, char *argv[])
                     while (fgets(line, sizeof(line), fptr))
                     {
                         // if(strcmp(line, ".\r\n") == 0) count++;
-                        if (strcmp(line, ".\r\n") == 0 || strcmp(line, ".\n") == 0)
+                        if (strncmp(line, ".", 1) == 0)
                             count++;
                     }
+                    //printf("count = %d\n", count);
 
                     fclose(fptr);
                     memset(buf, 0, sizeof(buf));
@@ -483,6 +434,7 @@ int main(int argc, char *argv[])
 
                     }
                 }
+                // 
                 else if (strncmp(buf, "RETR", 4) == 0)
                 {
                     char mailno_s[4];
@@ -492,7 +444,7 @@ int main(int argc, char *argv[])
                     }
                     mailno_s[strlen(mailno_s) - 1] = '\0';
                     int mailno = atoi(mailno_s);
-                    printf("mailno = %d\n", mailno);
+                    //printf("mailno = %d\n", mailno);
                     
                     if (deleted[mailno] == -1)
                     {
@@ -527,16 +479,16 @@ int main(int argc, char *argv[])
                         
                         if (temp == mailno - 1)
                         {
-                            while (strcmp(line, ".\r\n") != 0 || strcmp(line, ".\n") != 0)
+                            while (strncmp(line, ".", 1) != 0)
                             {
                                 send(pop_sockfd, line, strlen(line), 0);
-                                
+                                //printf("line = %s\n", line);
                                 memset(line, 0, sizeof(line));
                                 fgets(line, sizeof(line), fptr);
                             }
                             break;
                         }
-                        if (strcmp(line, ".\r\n") == 0 || strcmp(line, ".\n") == 0)
+                        if (strncmp(line, ".", 1) == 0)
                         {
                             temp++;
                         }
@@ -546,6 +498,7 @@ int main(int argc, char *argv[])
                     sprintf(buf, ".\r\n");
                     send(pop_sockfd, buf, strlen(buf), 0);
                 }
+                // 
                 else if (strncmp(buf, "DELE", 4) == 0)
                 {
                     char mailno_s[4];

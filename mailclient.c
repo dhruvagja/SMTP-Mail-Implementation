@@ -162,7 +162,7 @@ int main(int argc, char *argv[]){
             memset(buffer, 0, MAXLINE);
 
             ssize_t len = recv(sockfd, buffer, MAXLINE, 0);
-            printf("S : %s", buffer);
+            //printf("S : %s", buffer);
             
             if(strncmp(buffer, "+OK", 3) != 0){
                 printf("Error in connecting to POP3 server\n");
@@ -207,7 +207,7 @@ int main(int argc, char *argv[]){
             memset(buffer, 0, MAXLINE);
             len = recv(sockfd, buffer, MAXLINE, 0);
 
-            printf("S : %s", buffer);
+            //printf("S : %s", buffer);
             int n;
             char temp[MAXLINE];
 
@@ -229,7 +229,7 @@ int main(int argc, char *argv[]){
             for(int i = 0; i<n; i++){
                 deleted[i] = 0;
             }
-            printf("You have %d mails\n", n);
+            printf("\nYou have %d mails\n\n", n);
 
             
 
@@ -296,37 +296,7 @@ int main(int argc, char *argv[]){
 
 
             while(1){
-                // memset(buffer, 0, MAXLINE);
-                // strcpy(buffer, "LIST\r\n");
-                // send(sockfd, buffer, strlen(buffer), 0);
-                // input = 1;
-                // int count = 0;
-                // memset(buffer, 0, MAXLINE);
-                // len = recv(sockfd, buffer, MAXLINE, 0);
-                // printf("S : %s", buffer);
-
-                // if(strncmp(buffer, "-ERR", 4) == 0){
-                //     printf("Error in listing mails\n");
-                //     close(sockfd);
-                //     break;
-                // }
-                // while(1){
-                //     memset(buffer, 0, MAXLINE);
-                //     len = recv(sockfd, buffer, MAXLINE, 0);
-
-                //     for(int j = 0; j<len ; j++){
-                //         if(buffer[j] == '.'){
-                //             memset(temp, 0, MAXLINE);
-                //             strncpy(temp, buffer, j);
-                //             printf("%s\n", buffer);
-                //             goto next;
-                //         }
-                //     }
-                    
-                //     printf("%s", buffer);
-                // }
-                // next:
-
+                
                 
 
                 FILE *list = fopen("list.txt", "r");
@@ -344,7 +314,7 @@ int main(int argc, char *argv[]){
                 }
                 fclose(list);
 
-                printf("Enter the mail no. to see: ");
+                printf("\nEnter the mail no. to see: ");
                 scanf("%d", &input);
                 if(input == -1){
                     memset(buffer, 0, MAXLINE);
@@ -353,17 +323,17 @@ int main(int argc, char *argv[]){
                     send(sockfd, buffer, strlen(buffer), 0);
                     break;
                 }
-                if(input < 1 || input > n){
+                while(input < 1 || input > n){
                     printf("Invalid input\n");
-                    printf("Enter the mail no. to see: ");
+                    printf("\nEnter the mail no. to see: ");
                     scanf("%d", &input);
-                    if(input > 0 && input <= n){
+                    if(input > 0 && input <=n){
                         break;
                     }
                 }
 
                 
-
+                printf("input = %d\n", input);
                 memset(buffer, 0, MAXLINE);
                 strcpy(buffer, "RETR ");
                 memset(temp, 0, MAXLINE);
@@ -383,6 +353,7 @@ int main(int argc, char *argv[]){
                 }
 
                 while(1){
+                    printf("in while\n");
                     memset(buffer, 0, MAXLINE);
                     len = recv(sockfd, buffer, MAXLINE, 0);
 
@@ -428,7 +399,7 @@ int main(int argc, char *argv[]){
 
                     memset(buffer, 0, MAXLINE);
                     len = recv(sockfd, buffer, MAXLINE, 0);
-                    printf("%s", buffer);
+                    //printf("%s", buffer);
                     if(strncmp(buffer, "-ERR", 4) == 0){
                         printf("Error in deleting mail\n");
                         remove("list.txt");
@@ -437,7 +408,7 @@ int main(int argc, char *argv[]){
                     }
                     if(strncmp(buffer, "+OK", 3) == 0){
                         printf("Mail deleted\n");
-                        printf("input = %d\n", input);
+                        //printf("input = %d\n", input);
                         delete[input] = 1;
                     }
 
@@ -488,7 +459,28 @@ int main(int argc, char *argv[]){
                 i++;
                 fgets(body[i], MAXLINE,stdin);
             }while(strcmp(body[i], ".\n") != 0);
-            
+            char domain[MAXLINE];
+            for(int j = 0; j< MAXLINE; j++){
+                if(from[j] == '@'){
+                    int k;
+                    for(k = j+1; k< strlen(from); k++){
+                        if(from[k] == '\n'){
+                            domain[k-j-1] = '\0';
+                            break;
+                        }
+                        domain[k-j-1] = from[k];
+                    }
+                    if(domain[k - j -1] == '\0'){
+                        break;
+                    }
+                }
+
+            }
+            if(strcmp(domain, server_ip) != 0){
+                printf("Domain of the sender should be the ip address fo the server\n");
+                continue;
+            }
+
             if((strncmp(from, "From:", 5) != 0) || (strncmp(to, "To:", 3) != 0) || (strncmp(subject, "Subject:", 8) != 0)){
                 printf("Incorrect format\n");
                 continue;
@@ -537,7 +529,6 @@ int main(int argc, char *argv[]){
             memset(buffer, 0, MAXLINE);
             strcpy(buffer, "MAIL ");
             strcat(buffer, "FROM: <");
-            // changed from "from_username" to "from"
             char cleaned_from[MAXLINE];
             memset(cleaned_from, 0, MAXLINE);
             strcat(cleaned_from, user);
