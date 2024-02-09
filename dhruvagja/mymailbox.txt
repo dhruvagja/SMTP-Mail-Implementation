@@ -22,9 +22,3 @@ Subject: Added bad sequence of commands
 Recieved: 09-02-2024 04:12:23
 less gooo
 .
-From: sai@123
-To: dhruvagja@123
-Subject: checking
-Recieved: 09-02-2024 04:16:39
-jdlas
-.
